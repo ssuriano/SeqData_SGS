@@ -41,3 +41,6 @@ vignettes/*.pdf
 # Project specific
 # raw_data/
 # resources/
+
+#exploratory
+exploratory/
