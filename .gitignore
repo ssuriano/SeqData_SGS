@@ -13,7 +13,7 @@
 
 # Output files from R CMD build
 /*.tar.gz
-
+*.tar
 # Output files from R CMD check
 /*.Rcheck/
 
@@ -41,6 +41,8 @@ vignettes/*.pdf
 # Project specific
 # raw_data/
 # resources/
-
+*.fastq
+*.fasta
+*.fastq.gz
 #exploratory
 exploratory/
