@@ -1,0 +1,87 @@
+---
+title: "DADA2 for 16s"
+output: html_document
+date: "2026-08-10"
+---
+
+```{r}
+setwd("C:/Users/sgsurian/SEQ")
+
+#Filter
+
+library(dada2); packageVersion("dada2")
+# File parsing
+pathF <- "C:/Users/sgsurian/SEQ/16s Rhizo/16sRhizoF" 
+pathR <- "C:/Users/sgsurian/SEQ/16s Rhizo/16sRhizoR" 
+filtpathF <- file.path(pathF, "filtered") # Filtered forward files go into the pathF/filtered/ subdirectory
+filtpathR <- file.path(pathR, "filtered") # ...
+fastqFs <- sort(list.files(pathF, pattern="_R1_001.fastq.gz"))
+fastqRs <- sort(list.files(pathR, pattern="_R2_001.fastq.gz"))
+if(length(fastqFs) != length(fastqRs)) stop("Forward and reverse files do not match.")
+# Filtering: THESE PARAMETERS ARENT OPTIMAL FOR ALL DATASETS
+filterAndTrim(fwd=file.path(pathF, fastqFs), filt=file.path(filtpathF, fastqFs),
+              rev=file.path(pathR, fastqRs), filt.rev=file.path(filtpathR, fastqRs),
+              truncLen=c(240,200), maxEE=2, truncQ=11, maxN=0, rm.phix=TRUE,
+              compress=TRUE, verbose=TRUE, multithread=TRUE)
+```
+
+```{r}
+#Infer Sequence Variants
+library(dada2); packageVersion("dada2")
+# File parsing
+filtpathF <- "C:/Users/sgsurian/SEQ/16s Rhizo/16sRhizoF/filtered" 
+filtpathR <- "C:/Users/sgsurian/SEQ/16s Rhizo/16sRhizoR/filtered" 
+filtFs <- list.files(filtpathF, pattern="_F_filt.fastq.gz", full.names = TRUE)
+filtRs <- list.files(filtpathR, pattern="_R_filt.fastq.gz", full.names = TRUE)
+sample.names <- sapply(strsplit(basename(filtFs), "_S"), `[`, 1) # Assumes filename = samplename_XXX.fastq.gz
+sample.namesR <- sapply(strsplit(basename(filtRs), "_S"), `[`, 1) # Assumes filename = samplename_XXX.fastq.gz
+if(!identical(sample.names, sample.namesR)) stop("Forward and reverse files do not match.")
+names(filtFs) <- sample.names
+names(filtRs) <- sample.names
+set.seed(100)
+# Learn forward error rates
+errF <- learnErrors(filtFs, nbases=1e8, multithread=TRUE)
+# Learn reverse error rates
+errR <- learnErrors(filtRs, nbases=1e8, multithread=TRUE)
+# Sample inference and merger of paired-end reads
+mergers <- vector("list", length(sample.names))
+names(mergers) <- sample.names
+for(sam in sample.names) {
+  cat("Processing:", sam, "\n")
+    derepF <- derepFastq(filtFs[[sam]])
+    ddF <- dada(derepF, err=errF, multithread=TRUE)
+    derepR <- derepFastq(filtRs[[sam]])
+    ddR <- dada(derepR, err=errR, multithread=TRUE)
+    merger <- mergePairs(ddF, derepF, ddR, derepR)
+    mergers[[sam]] <- merger
+}
+rm(derepF); rm(derepR)
+# Construct sequence table and remove chimeras
+seqtab <- makeSequenceTable(mergers)
+saveRDS(seqtab, "C:/Users/sgsurian/SEQ/16s Rhizo/Outputs/seqtab.rds") # CHANGE ME to where you want sequence table saved
+
+foo <- readRDS("C:/Users/sgsurian/SEQ/16s Rhizo/Outputs/seqtab.rds")
+foo
+
+```
+
+```{r}
+#Merge Runs, Remove Chimeras, Assin Taxonomy
+
+library(dada2); packageVersion("dada2")
+
+# Remove chimeras
+seqtab <- removeBimeraDenovo(st.all, method="consensus", multithread=TRUE)
+# Assign taxonomy
+tax <- assignTaxonomy(seqtab, "C:/Users/sgsurian/SEQ/16s Rhizo/silva_nr99_v138.1_train_set.fa.gz", multithread=TRUE)
+# Write to disk
+saveRDS(seqtab, "C:/Users/sgsurian/SEQ/16s Rhizo/Outputs/seqtab_final.rds") 
+saveRDS(tax, "C:/Users/sgsurian/SEQ/16s Rhizo/Outputs/tax_final.rds") 
+```
+
+```{r}
+#Phyloseq
+
+
+```
+
