@@ -44,5 +44,9 @@ vignettes/*.pdf
 *.fastq
 *.fasta
 *.fastq.gz
+*.fq
+*.fq.gz
+*.fa.qz
+*.fa
 #exploratory
 exploratory/
